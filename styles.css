@@ -24,8 +24,19 @@ input[type="number"] {
     width: 80px;
 }
 
-#export-btn {
+#copy-btn {
     margin-left: auto;
+    padding: 10px 20px;
+    font-size: 15px;
+    background-color: #4a6cf7;
+}
+
+#copy-btn:hover {
+    background-color: #3a57d7;
+}
+
+#export-btn {
+    margin-left: 10px;
     padding: 10px 20px;
     font-size: 15px;
     background-color: #22c55e;

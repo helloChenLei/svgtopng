@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const widthInput = document.getElementById('width-input');
     const heightInput = document.getElementById('height-input');
     const exportBtn = document.getElementById('export-btn');
+    const copyBtn = document.getElementById('copy-btn');
     const previewContainer = document.getElementById('preview-container');
 
     // 加载示例代码
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bgColor.addEventListener('input', updateBackground);
     transparentBg.addEventListener('change', updateBackground);
     exportBtn.addEventListener('click', exportImage);
+    copyBtn.addEventListener('click', copyImageToClipboard);
 
     // 初始化示例代码
     if (!editor.getValue()) {
@@ -247,6 +249,101 @@ document.addEventListener('DOMContentLoaded', function() {
             img.src = url;
         } catch (error) {
             alert('导出失败: ' + error.message);
+        }
+    }
+    
+    // 复制图片到剪贴板
+    function copyImageToClipboard() {
+        const svgCode = editor.getValue().trim();
+        
+        if (!svgCode) {
+            alert('请先输入有效的SVG代码');
+            return;
+        }
+        
+        try {
+            // 验证并修复SVG代码
+            const fixedSVG = validateSVG(svgCode);
+            
+            // 创建SVG文档
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(fixedSVG, 'image/svg+xml');
+            
+            // 检查解析错误
+            const parserError = svgDoc.querySelector('parsererror');
+            if (parserError) {
+                alert('SVG解析错误，请检查代码');
+                return;
+            }
+            
+            // 获取SVG元素
+            const svgElement = svgDoc.documentElement;
+            
+            // 获取导出设置
+            const format = 'png'; // 固定使用PNG格式复制到剪贴板
+            const scale = parseFloat(scaleSelect.value);
+            
+            // 获取SVG尺寸
+            let width = svgElement.getAttribute('width');
+            let height = svgElement.getAttribute('height');
+            
+            // 移除单位，只保留数字
+            width = width ? parseFloat(width.replace(/[^0-9.]/g, '')) : 300;
+            height = height ? parseFloat(height.replace(/[^0-9.]/g, '')) : 150;
+            
+            // 使用用户指定的尺寸（如果有）
+            const customWidth = widthInput.value ? parseInt(widthInput.value) : width;
+            const customHeight = heightInput.value ? parseInt(heightInput.value) : height;
+            
+            // 计算导出尺寸
+            const exportWidth = Math.round(customWidth * scale);
+            const exportHeight = Math.round(customHeight * scale);
+            
+            // 创建Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = exportWidth;
+            canvas.height = exportHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // 设置背景（如果不是透明）
+            if (!transparentBg.checked) {
+                ctx.fillStyle = bgColor.value;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // 转换SVG为图片
+            const img = new Image();
+            const svgBlob = new Blob([fixedSVG], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
+                URL.revokeObjectURL(url);
+                
+                // 将图片转换为Blob
+                canvas.toBlob(function(blob) {
+                    try {
+                        // 尝试使用新的Clipboard API
+                        navigator.clipboard.write([
+                            new ClipboardItem({
+                                'image/png': blob
+                            })
+                        ]).then(() => {
+                            alert('图片已复制到剪贴板');
+                        }).catch(err => {
+                            console.error('复制失败:', err);
+                            alert('复制失败，您的浏览器可能不支持此功能');
+                        });
+                    } catch (error) {
+                        console.error('复制到剪贴板失败:', error);
+                        alert('复制失败，您的浏览器可能不支持此功能');
+                    }
+                }, 'image/png');
+            };
+            
+            img.src = url;
+        } catch (error) {
+            alert('复制失败: ' + error.message);
         }
     }
     
